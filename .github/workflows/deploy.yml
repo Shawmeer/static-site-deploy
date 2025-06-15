@@ -33,13 +33,16 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -no-color
 
       - name: Output S3 bucket name and CloudFront ID
         id: terraform_outputs
+        shell: bash
         run: |
-          echo "s3_bucket_name=$(terraform output -raw s3_bucket_name)" >> "$GITHUB_OUTPUT"
-          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+          s3_bucket_name=$(terraform output -raw s3_bucket_name)
+          cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)
+          echo "s3_bucket_name=$s3_bucket_name" >> "$GITHUB_OUTPUT"
+          echo "cloudfront_distribution_id=$cloudfront_distribution_id" >> "$GITHUB_OUTPUT"
 
     outputs:
       s3_bucket_name: ${{ steps.terraform_outputs.outputs.s3_bucket_name }}
