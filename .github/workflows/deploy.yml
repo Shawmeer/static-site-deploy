@@ -1,4 +1,4 @@
-name: Deploy React App with Terraform + S3 + CloudFront
+name: Deploy React App with Terraform, S3, and CloudFront
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       cloudfront_distribution_id: ${{ steps.export.outputs.cloudfront_distribution_id }}
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Terraform
@@ -53,9 +53,10 @@ jobs:
     env:
       S3_BUCKET_NAME: ${{ needs.terraform.outputs.s3_bucket_name }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
+      AWS_REGION: ap-south-1
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -77,11 +78,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Debug Outputs
-        run: |
-          echo "Deploying to bucket: $S3_BUCKET_NAME"
-          echo "Invalidating distribution: $CLOUDFRONT_DISTRIBUTION_ID"
 
       - name: Sync React app build to S3
         run: |
