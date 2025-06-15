@@ -38,11 +38,15 @@ jobs:
       - name: Output S3 bucket name and CloudFront ID
         id: terraform_outputs
         run: |
+          echo "Extracting Terraform outputs..."
           s3_bucket_name=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
           cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
-          
-          echo "s3_bucket_name=$s3_bucket_name" >> $GITHUB_OUTPUT
-          echo "cloudfront_distribution_id=$cloudfront_distribution_id" >> $GITHUB_OUTPUT
+
+          echo "s3_bucket_name=${s3_bucket_name}"
+          echo "cloudfront_distribution_id=${cloudfront_distribution_id}"
+
+          echo "s3_bucket_name=${s3_bucket_name}" >> $GITHUB_OUTPUT
+          echo "cloudfront_distribution_id=${cloudfront_distribution_id}" >> $GITHUB_OUTPUT
 
     outputs:
       s3_bucket_name: ${{ steps.terraform_outputs.outputs.s3_bucket_name }}
@@ -76,6 +80,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Print bucket name (for debugging)
+        run: |
+          echo "Bucket: ${{ needs.terraform.outputs.s3_bucket_name }}"
 
       - name: Sync React app build to S3
         run: |
