@@ -37,10 +37,8 @@ jobs:
 
       - name: Export Terraform outputs to ENV
         run: |
-          echo "Extracting Terraform outputs..."
           S3_BUCKET_NAME=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
           CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
-
           echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> $GITHUB_ENV
           echo "CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID" >> $GITHUB_ENV
 
@@ -48,11 +46,6 @@ jobs:
     name: Build and Deploy React App
     needs: terraform
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: ap-south-1
-      # These come from the terraform job via GITHUB_ENV
-      S3_BUCKET_NAME: ${{ env.S3_BUCKET_NAME }}
-      CLOUDFRONT_DISTRIBUTION_ID: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}
 
     steps:
       - name: Checkout repo
@@ -81,7 +74,7 @@ jobs:
       - name: Debug Outputs
         run: |
           echo "Deploying to bucket: $S3_BUCKET_NAME"
-          echo "Using distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          echo "Invalidating distribution: $CLOUDFRONT_DISTRIBUTION_ID"
 
       - name: Sync React app build to S3
         run: |
