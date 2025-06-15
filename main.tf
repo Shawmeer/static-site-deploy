@@ -1,3 +1,9 @@
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+  default     = "my-react-app-bucket-unique-123789"  # change this to your unique bucket name
+}
+
 resource "aws_s3_bucket" "react_app_bucket" {
   bucket = var.bucket_name
 }
@@ -40,7 +46,7 @@ resource "aws_s3_bucket_policy" "bucket_policy" {
 
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
-    domain_name = aws_s3_bucket.react_app_bucket.website_endpoint
+    domain_name = aws_s3_bucket.react_app_bucket.website_domain
     origin_id   = "S3-react-app-origin"
 
     custom_origin_config {
@@ -82,4 +88,16 @@ resource "aws_cloudfront_distribution" "cdn" {
   viewer_certificate {
     cloudfront_default_certificate = true
   }
+}
+
+output "s3_bucket_name" {
+  value = aws_s3_bucket.react_app_bucket.bucket
+}
+
+output "cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.cdn.id
+}
+
+output "cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.cdn.domain_name
 }
