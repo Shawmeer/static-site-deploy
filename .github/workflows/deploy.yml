@@ -1,4 +1,4 @@
-name: Deploy React App with Terraform, S3, and CloudFront
+name: Deploy React App with Terraform + S3 + CloudFront
 
 on:
   push:
@@ -9,61 +9,42 @@ env:
   AWS_REGION: ap-south-1
 
 jobs:
-  terraform:
-    name: Terraform Apply
+  build_and_deploy:
+    name: Build Infra, App & Deploy
     runs-on: ubuntu-latest
 
-    outputs:
-      s3_bucket_name: ${{ steps.export.outputs.s3_bucket_name }}
-      cloudfront_distribution_id: ${{ steps.export.outputs.cloudfront_distribution_id }}
-
     steps:
-      - name: Checkout repository
+      ## 1. Checkout
+      - name: Checkout repo
         uses: actions/checkout@v3
 
+      ## 2. Terraform Setup & Apply
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials for Terraform
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -no-color
-
-      - name: Debug Terraform Outputs
+      - name: Terraform Init & Apply
         run: |
-          terraform output s3_bucket_name
-          terraform output cloudfront_distribution_id
+          terraform init
+          terraform apply -auto-approve -no-color
 
-      - name: Export Terraform outputs to ENV
-        id: export
+      ## 3. Export Terraform Outputs to ENV
+      - name: Export bucket & distribution ID
         run: |
-          echo "s3_bucket_name=$(terraform output -raw s3_bucket_name | tr -d '\r\n')" >> $GITHUB_OUTPUT
-          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')" >> $GITHUB_OUTPUT
+          BUCKET=$(terraform output -raw s3_bucket_name)
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          echo "S3_BUCKET_NAME=$BUCKET" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=$DIST_ID" >> $GITHUB_ENV
 
-  deploy:
-    name: Build and Deploy React App
-    needs: terraform
-    runs-on: ubuntu-latest
-
-    env:
-      S3_BUCKET_NAME: ${{ needs.terraform.outputs.s3_bucket_name }}
-      CLOUDFRONT_DISTRIBUTION_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
-      AWS_REGION: ap-south-1
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
+      ## 4. Build React App
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -73,28 +54,16 @@ jobs:
         working-directory: ./shopping-time
         run: npm install
 
-      - name: Build React app (Vite)
+      - name: Build React app
         working-directory: ./shopping-time
         run: npm run build
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Debug Output
-        run: |
-          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
-          echo "CLOUDFRONT_DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID"
-          ls -l ./shopping-time/dist
-
-      - name: Sync React app build to S3
+      ## 5. Deploy to S3 & Invalidate Cache
+      - name: Sync React app to S3
         run: |
           aws s3 sync ./shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
 
-      - name: Invalidate CloudFront cache
+      - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
