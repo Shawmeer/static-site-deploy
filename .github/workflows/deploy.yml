@@ -13,10 +13,6 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
 
-    outputs:
-      s3_bucket_name: ${{ steps.extract_outputs.outputs.s3_bucket_name }}
-      cloudfront_distribution_id: ${{ steps.extract_outputs.outputs.cloudfront_distribution_id }}
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -39,27 +35,24 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
-      - name: Extract Terraform Outputs
-        id: extract_outputs
+      - name: Export Terraform outputs to ENV
         run: |
-          s3_bucket_name=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
-          cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
+          echo "Extracting Terraform outputs..."
+          S3_BUCKET_NAME=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
+          CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
 
-          echo "s3_bucket_name=$s3_bucket_name"
-          echo "cloudfront_distribution_id=$cloudfront_distribution_id"
-
-          echo "::set-output name=s3_bucket_name::$s3_bucket_name"
-          echo "::set-output name=cloudfront_distribution_id::$cloudfront_distribution_id"
+          echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID" >> $GITHUB_ENV
 
   deploy:
     name: Build and Deploy React App
     needs: terraform
     runs-on: ubuntu-latest
-
     env:
       AWS_REGION: ap-south-1
-      S3_BUCKET_NAME: ${{ needs.terraform.outputs.s3_bucket_name }}
-      CLOUDFRONT_DISTRIBUTION_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
+      # These come from the terraform job via GITHUB_ENV
+      S3_BUCKET_NAME: ${{ env.S3_BUCKET_NAME }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}
 
     steps:
       - name: Checkout repo
@@ -85,16 +78,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Debug Bucket and Distribution ID
+      - name: Debug Outputs
         run: |
-          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
-          echo "CLOUDFRONT_DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID"
+          echo "Deploying to bucket: $S3_BUCKET_NAME"
+          echo "Using distribution: $CLOUDFRONT_DISTRIBUTION_ID"
 
-      - name: Sync React App to S3
+      - name: Sync React app build to S3
         run: |
           aws s3 sync shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
 
-      - name: Invalidate CloudFront Cache
+      - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
