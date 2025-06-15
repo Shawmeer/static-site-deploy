@@ -42,7 +42,7 @@ resource "aws_s3_bucket_policy" "bucket_policy" {
 
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
-    domain_name = domain_name = aws_s3_bucket.react_app_bucket.website_endpoint
+    domain_name = aws_s3_bucket.react_app_bucket.website_endpoint
     origin_id   = "S3-react-app-origin"
 
     custom_origin_config {
