@@ -35,22 +35,14 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
-      - name: Output S3 bucket name and CloudFront ID
-        id: terraform_outputs
+      - name: Export Terraform Outputs to ENV
         run: |
           echo "Extracting Terraform outputs..."
-          s3_bucket_name=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
-          cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
+          S3_BUCKET_NAME=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
+          CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
 
-          echo "s3_bucket_name=${s3_bucket_name}"
-          echo "cloudfront_distribution_id=${cloudfront_distribution_id}"
-
-          echo "s3_bucket_name=${s3_bucket_name}" >> $GITHUB_OUTPUT
-          echo "cloudfront_distribution_id=${cloudfront_distribution_id}" >> $GITHUB_OUTPUT
-
-    outputs:
-      s3_bucket_name: ${{ steps.terraform_outputs.outputs.s3_bucket_name }}
-      cloudfront_distribution_id: ${{ steps.terraform_outputs.outputs.cloudfront_distribution_id }}
+          echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID" >> $GITHUB_ENV
 
   deploy:
     name: Build and Deploy React App
@@ -81,16 +73,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Print bucket name (for debugging)
+      - name: Debug Output
         run: |
-          echo "Bucket: ${{ needs.terraform.outputs.s3_bucket_name }}"
+          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
+          echo "CLOUDFRONT_DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID"
 
-      - name: Sync React app build to S3
+      - name: Sync React App to S3
         run: |
-          aws s3 sync shopping-time/dist/ s3://${{ needs.terraform.outputs.s3_bucket_name }} --delete --acl public-read
+          aws s3 sync shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
 
-      - name: Invalidate CloudFront cache
+      - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ needs.terraform.outputs.cloudfront_distribution_id }} \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
             --paths "/*"
