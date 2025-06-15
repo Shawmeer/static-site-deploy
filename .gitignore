@@ -1,0 +1,19 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.backup
+
+# Crash log files
+crash.log
+
+# Ignore CLI configuration files
+terraform.rc
+
+# Ignore .vscode folder
+.vscode/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
