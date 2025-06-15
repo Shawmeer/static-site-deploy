@@ -39,6 +39,11 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color
 
+      - name: Debug Terraform Outputs
+        run: |
+          terraform output s3_bucket_name
+          terraform output cloudfront_distribution_id
+
       - name: Export Terraform outputs to ENV
         id: export
         run: |
@@ -68,7 +73,7 @@ jobs:
         working-directory: ./shopping-time
         run: npm install
 
-      - name: Build React app
+      - name: Build React app (Vite)
         working-directory: ./shopping-time
         run: npm run build
 
@@ -83,10 +88,11 @@ jobs:
         run: |
           echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
           echo "CLOUDFRONT_DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID"
+          ls -l ./shopping-time/dist
 
       - name: Sync React app build to S3
         run: |
-          aws s3 sync shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
+          aws s3 sync ./shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
 
       - name: Invalidate CloudFront cache
         run: |
