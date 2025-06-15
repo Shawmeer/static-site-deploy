@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"  # Change to your preferred region
+  region = "ap-south-1"  # Change to your preferred region
 }
 resource "aws_s3_bucket" "react_app_bucket" {
   bucket = var.bucket_name
