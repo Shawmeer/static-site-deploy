@@ -1,8 +1,4 @@
-variable "bucket_name" {
-  description = "The name of the S3 bucket"
-  type        = string
-  default     = "my-react-app-bucket-unique-123789"  # change this to your unique bucket name
-}
+
 
 resource "aws_s3_bucket" "react_app_bucket" {
   bucket = var.bucket_name
