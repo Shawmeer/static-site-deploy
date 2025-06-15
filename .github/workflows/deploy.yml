@@ -13,6 +13,10 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
 
+    outputs:
+      s3_bucket_name: ${{ steps.export.outputs.s3_bucket_name }}
+      cloudfront_distribution_id: ${{ steps.export.outputs.cloudfront_distribution_id }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -36,16 +40,19 @@ jobs:
         run: terraform apply -auto-approve -no-color
 
       - name: Export Terraform outputs to ENV
+        id: export
         run: |
-          S3_BUCKET_NAME=$(terraform output -raw s3_bucket_name | tr -d '\r\n')
-          CLOUDFRONT_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')
-          echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> $GITHUB_ENV
-          echo "CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID" >> $GITHUB_ENV
+          echo "s3_bucket_name=$(terraform output -raw s3_bucket_name | tr -d '\r\n')" >> $GITHUB_OUTPUT
+          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id | tr -d '\r\n')" >> $GITHUB_OUTPUT
 
   deploy:
     name: Build and Deploy React App
     needs: terraform
     runs-on: ubuntu-latest
+
+    env:
+      S3_BUCKET_NAME: ${{ needs.terraform.outputs.s3_bucket_name }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ needs.terraform.outputs.cloudfront_distribution_id }}
 
     steps:
       - name: Checkout repo
