@@ -79,6 +79,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Debug Output
+        run: |
+          echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
+          echo "CLOUDFRONT_DISTRIBUTION_ID: $CLOUDFRONT_DISTRIBUTION_ID"
+
       - name: Sync React app build to S3
         run: |
           aws s3 sync shopping-time/dist/ s3://$S3_BUCKET_NAME --delete --acl public-read
